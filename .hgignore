@@ -1,0 +1,9 @@
+syntax: glob
+
+bin/
+lib/
+include/
+
+gdocs.token
+client_secrets.json
+
