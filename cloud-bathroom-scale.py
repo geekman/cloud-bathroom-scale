@@ -219,11 +219,11 @@ def main():
 				data = []
 
 			# record the weight if it is valid and stable
-			if weight > 0 and stable >= 5:
+			if weight > 0 and stable >= 10:
 				p = Process(target=record_weight, 
 						args=(update_lock, credentials, args.spreadsheet_key, weight))
 				p.start()
-				stable = -10
+				stable = -30
 
 
 if __name__ == '__main__':
