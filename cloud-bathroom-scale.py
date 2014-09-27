@@ -12,6 +12,7 @@ import os
 import sys
 import argparse
 from datetime import datetime
+from multiprocessing import Process, Lock
 
 from fcntl import ioctl
 import struct, array
@@ -141,17 +142,24 @@ def get_authorization(cache_file):
 	return credentials
 
 
-def record_weight(credentials, doc_key, weight):
+def record_weight(lock, credentials, doc_key, weight):
 	try:
 		timestamp = datetime.now()
+		lock.acquire()
+
+		print('updating spreadsheet...')
 
 		gspread_creds = gspread.authorize(credentials)
 		sheet = gspread_creds.open_by_key(doc_key).sheet1
 		sheet.append_row((timestamp, weight))
 
 		print('recorded', timestamp, weight)
+		return True
 	except HTTPError as e:
 		print('error updating Google spreadsheet', e.response.status, e.response.reason)
+		return False
+	finally:
+		lock.release()
 
 
 def main():
@@ -167,7 +175,7 @@ def main():
 	credentials = get_authorization(args.tokenfile)
 
 	if args.test:
-		record_weight(credentials, args.spreadsheet_key, 0.0)
+		record_weight(Lock(), credentials, args.spreadsheet_key, 0.0)
 		sys.exit(0)
 
 	# main loop
@@ -175,6 +183,7 @@ def main():
 	dev = lirc(args.dev)
 	data = []
 	stable = 0
+	update_lock = Lock()
 
 	print('monitoring LIRC device...')
 
@@ -211,7 +220,9 @@ def main():
 
 			# record the weight if it is valid and stable
 			if weight > 0 and stable >= 5:
-				record_weight(credentials, args.spreadsheet_key, weight)
+				p = Process(target=record_weight, 
+						args=(update_lock, credentials, args.spreadsheet_key, weight))
+				p.start()
 				stable = -10
 
 
