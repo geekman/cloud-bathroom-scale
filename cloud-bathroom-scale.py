@@ -12,7 +12,8 @@ import os
 import sys
 import argparse
 from datetime import datetime
-from multiprocessing import Process, Lock
+from time import time, sleep
+from threading import Thread, Lock
 
 from fcntl import ioctl
 import struct, array
@@ -67,6 +68,36 @@ class lirc:
 		readval = self.fd.read(self.value_struct.size)
 		v, = self.value_struct.unpack(readval)
 		return v & self.PULSE_BIT != 0, v & self.PULSE_MASK
+
+
+class weight_state:
+	def __init__(self):
+		self.update_lock = Lock()
+
+		self.stable_count = 0
+		self.last_stable_time = 0
+		self.stable_weight = 0
+
+		self.last_update_time = 0
+		self.weight = 0
+
+	def update(self, is_stable, weight):
+		now = time()
+		if is_stable:
+			self.stable_count += 1
+			self.last_stable_time = now
+			self.stable_weight = weight
+		else:
+			self.stable_count = 0
+
+		self.last_update_time = now
+		self.weight = weight
+
+	def can_record(self):
+		now = time()
+		return self.stable_count >= 10 and \
+			self.stable_weight > 0 and \
+			now - self.last_stable_time > 2
 
 
 def read_byte(dev, bits=8):
@@ -142,24 +173,35 @@ def get_authorization(cache_file):
 	return credentials
 
 
-def record_weight(lock, credentials, doc_key, weight):
+def record_weight(state, credentials, doc_key):
 	try:
 		timestamp = datetime.now()
-		lock.acquire()
 
 		print('updating spreadsheet...')
 
 		gspread_creds = gspread.authorize(credentials)
 		sheet = gspread_creds.open_by_key(doc_key).sheet1
-		sheet.append_row((timestamp, weight))
+		sheet.append_row((timestamp, state.stable_weight))
 
-		print('recorded', timestamp, weight)
+		print('recorded', timestamp, state.stable_weight)
 		return True
 	except HTTPError as e:
 		print('error updating Google spreadsheet', e.response.status, e.response.reason)
 		return False
 	finally:
-		lock.release()
+		pass
+
+
+def record_stable_weight(state, credentials, doc_key):
+	try:
+		while True:
+			if state.can_record():
+				record_weight(state, credentials, doc_key)
+				break
+
+			sleep(0.5)
+	finally:
+		state.update_lock.release()
 
 
 def main():
@@ -181,9 +223,8 @@ def main():
 	# main loop
 
 	dev = lirc(args.dev)
+	state = weight_state()
 	data = []
-	stable = 0
-	update_lock = Lock()
 
 	print('monitoring LIRC device...')
 
@@ -209,21 +250,17 @@ def main():
 				if args.debug:
 					print('%02x' % data[1], weight)
 
-				if data[1] == 0x8C:
-					stable += 1
-				else:
-					stable = 0
+				state.update(data[1] == 0x8C, weight)
 			except:
 				print('checksum failed')
 			finally:
 				data = []
 
-			# record the weight if it is valid and stable
-			if weight > 0 and stable >= 10:
-				p = Process(target=record_weight, 
-						args=(update_lock, credentials, args.spreadsheet_key, weight))
+			# start process to monitor for stable weight and record it
+			if state.stable_count > 10 and state.update_lock.acquire(False):
+				p = Thread(target=record_stable_weight, 
+						args=(state, credentials, args.spreadsheet_key))
 				p.start()
-				stable = -30
 
 
 if __name__ == '__main__':
