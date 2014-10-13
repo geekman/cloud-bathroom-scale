@@ -79,6 +79,13 @@ argument.
 If there are problems, you can pass the `--debug` argument to see if weight 
 measurements are being correctly recognized.
 
+A systemd service file has been included (tested on Arch Linux) to
+automatically start the logging script on boot. You will need to copy this file
+into `/etc/systemd/system/multi-user.target.wants/` and modify the
+`Environment=` lines accordingly. For "security", the script runs as my user
+and this can be specified by the `User=` line. It assumes the virtualenv is
+setup in the `$HOME/cloud-bathroom-scale` directory.
+
 
 License
 --------
