@@ -70,6 +70,33 @@ class lirc:
 		return v & self.PULSE_BIT != 0, v & self.PULSE_MASK
 
 
+class gpioled:
+	def __init__(self, pin):
+		self.path = '/sys/class/gpio/gpio%d/value' % pin
+
+		self.fd = None
+		if not os.path.exists(self.path):
+			raise ValueError('GPIO pin %d has not been exported' % pin)
+		elif not os.access(self.path, os.W_OK):
+			raise ValueError('cannot control GPIO pin %d - check permissions' % pin)
+
+		self.fd = open(self.path, 'wb', 0)
+		self.state = True	# initial state
+
+	def __del__(self):
+		if self.fd is not None:
+			self.set_state(False)
+			self.fd.close()
+
+	def set_state(self, state):
+		self.state = bool(state)
+		self.fd.write('1' if self.state else '0')
+
+	def toggle(self):
+		self.set_state(self.state)
+		self.state = not self.state
+
+
 class weight_state:
 	def __init__(self):
 		self.update_lock = Lock()
@@ -192,15 +219,17 @@ def record_weight(state, credentials, doc_key):
 		pass
 
 
-def record_stable_weight(state, credentials, doc_key):
+def record_stable_weight(state, led, credentials, doc_key):
 	try:
 		while True:
 			if state.can_record():
+				led.set_state(True)
 				record_weight(state, credentials, doc_key)
 				break
 
 			sleep(0.5)
 	finally:
+		led.set_state(False)
 		state.update_lock.release()
 
 
@@ -209,6 +238,7 @@ def main():
 	ap.add_argument('--test', action='store_true', help='Tests authentication and logging')
 	ap.add_argument('--debug', action='store_true', help='Displays debugging info')
 	ap.add_argument('--dev', default='/dev/lirc0', help='LIRC device (default: "%(default)s")')
+	ap.add_argument('--led', type=int, default=18, help='GPIO pin for status LED (default: "%(default)s")')
 	ap.add_argument('--tokenfile', default=datafile('gdocs.token'), 
 		help='File which stores the access_token (default: "%(default)s")')
 	ap.add_argument('spreadsheet_key', help='Spreadsheet "key"')
@@ -222,6 +252,7 @@ def main():
 
 	# main loop
 
+	led = gpioled(args.led)
 	dev = lirc(args.dev)
 	state = weight_state()
 	data = []
@@ -247,6 +278,8 @@ def main():
 				weight = data[2] << 8 | data[3]
 				weight /= 10.0
 
+				led.toggle()
+
 				if args.debug:
 					print('%02x' % data[1], weight)
 
@@ -259,7 +292,7 @@ def main():
 			# start process to monitor for stable weight and record it
 			if state.stable_count > 10 and state.update_lock.acquire(False):
 				p = Thread(target=record_stable_weight, 
-						args=(state, credentials, args.spreadsheet_key))
+						args=(state, led, credentials, args.spreadsheet_key))
 				p.start()
 
 

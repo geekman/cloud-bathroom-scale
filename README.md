@@ -67,9 +67,14 @@ Then the script needs to be started:
     ./cloud-bathroom-scale.py <DOCUMENT_KEY>
 
 When you step onto the scale, the bathroom scale should emit the measurements 
-via infrared and will be picked up by the script.
+via infrared and will be picked up by the script. When the weight is stable,
+the reading is recorded into the Google Docs spreadsheet.
 
-When the weight is stable, the reading is recorded into the Google Docs spreadsheet.
+A status LED can be added to visually indicate to the user if the measurements 
+are being picked up by the IR receiver. The LED blinks to indicate this, and 
+when the weight is being recorded, the LED turns solid for a few seconds, then 
+turns off. The GPIO pin connected to the LED can be specified by the `--led` 
+argument.
 
 If there are problems, you can pass the `--debug` argument to see if weight 
 measurements are being correctly recognized.
