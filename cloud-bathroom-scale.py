@@ -46,10 +46,17 @@ class lirc:
 	PULSE_BIT  = 0x01000000
 	PULSE_MASK = 0x00FFFFFF
 
+	DEBUG_LOG = None
+
 	def __init__(self, dev):
 		self.dev = dev
 		self.fd = open(dev, 'rb')
 		self.value_struct = struct.Struct('I')
+
+		# for debug logging
+		self.debug_fd = None
+		if self.DEBUG_LOG is not None:
+			self.debug_fd = open(self.DEBUG_LOG, 'wb')
 
 	def ioctl(self, req):
 		buf = array.array('I', [0])
@@ -66,6 +73,8 @@ class lirc:
 
 	def read(self):
 		readval = self.fd.read(self.value_struct.size)
+		if self.debug_fd:
+			self.debug_fd.write(readval)
 		v, = self.value_struct.unpack(readval)
 		return v & self.PULSE_BIT != 0, v & self.PULSE_MASK
 
@@ -133,9 +142,11 @@ def read_byte(dev, bits=8):
 	margin = 100	# acceptable margin of error
 	byte = 0
 	i = 0
+	durations = []
 
 	while i < bits:
 		is_pulse, pulse_len = dev.read()
+		durations.extend([is_pulse, pulse_len])
 
 		# wait for pulse
 		if not is_pulse and i == 0:
@@ -144,6 +155,7 @@ def read_byte(dev, bits=8):
 		v = -1
 		if is_pulse and 500-margin < pulse_len < 500+margin:
 			is_pulse, pulse_len = dev.read()
+			durations.extend([is_pulse, pulse_len])
 			if not is_pulse:
 				if 500-margin < pulse_len < 500+margin:
 					v = 1
@@ -152,6 +164,7 @@ def read_byte(dev, bits=8):
 
 		# reset bit counter if we didn't see a full byte
 		if v == -1:
+			#print(repr(durations))
 			i = 0
 			return None
 
