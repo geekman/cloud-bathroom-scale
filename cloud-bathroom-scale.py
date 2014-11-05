@@ -139,7 +139,8 @@ class weight_state:
 def read_byte(dev, bits=8):
 	"""Reads a single byte from the IR transmission."""
 
-	margin = 100	# acceptable margin of error
+	margin = 200	# acceptable margin of error
+	margin2 = 15000
 	byte = 0
 	i = 0
 	durations = []
@@ -161,6 +162,8 @@ def read_byte(dev, bits=8):
 					v = 1
 				elif 1000-margin < pulse_len < 1000+margin:
 					v = 0
+				elif 75000-margin2 < pulse_len < 75000+margin2 and i == 0:
+					continue
 
 		# reset bit counter if we didn't see a full byte
 		if v == -1:
