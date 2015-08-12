@@ -263,7 +263,8 @@ def main():
 	credentials = get_authorization(args.tokenfile)
 
 	if args.test:
-		record_weight(Lock(), credentials, args.spreadsheet_key, 0.0)
+		state = weight_state()
+		record_weight(state, credentials, args.spreadsheet_key)
 		sys.exit(0)
 
 	# main loop
