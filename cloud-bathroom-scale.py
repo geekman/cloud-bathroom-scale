@@ -78,17 +78,27 @@ class lirc:
 
 
 class gpioled:
-	def __init__(self, pin):
-		self.path = '/sys/class/gpio/gpio%d/value' % pin
-
-		self.fd = None
-		if not os.path.exists(self.path):
-			raise ValueError('GPIO pin %d has not been exported' % pin)
-		elif not os.access(self.path, os.W_OK):
-			raise ValueError('cannot control GPIO pin %d - check permissions' % pin)
-
-		self.fd = open(self.path, 'wb', 0)
+	def _open(self, path):
+		self.path = path
+		self.fd = open(path, 'wb', 0)
 		self.state = True	# initial state
+
+	def __init__(self, pin):
+		self.fd = None
+
+		# check for LED name first
+		path = '/sys/class/leds/%s/brightness' % pin
+		if os.path.exists(path):
+			self._open(path)
+			return
+
+		path = '/sys/class/gpio/gpio%s/value' % pin
+		if os.path.exists(path):
+			self._open(path)
+		elif not os.path.exists(path):
+			raise ValueError('GPIO pin %s has not been exported' % pin)
+		elif not os.access(path, os.W_OK):
+			raise ValueError('cannot control GPIO pin %s - check permissions' % pin)
 
 	def __del__(self):
 		if self.fd is not None:
@@ -252,7 +262,7 @@ def main():
 	ap.add_argument('--test', action='store_true', help='Tests authentication and logging')
 	ap.add_argument('--debug', action='store_true', help='Displays debugging info')
 	ap.add_argument('--dev', default='/dev/lirc0', help='LIRC device (default: "%(default)s")')
-	ap.add_argument('--led', type=int, default=18, help='GPIO pin for status LED (default: "%(default)s")')
+	ap.add_argument('--led', default=18, help='GPIO pin (or LED name) for status LED (default: "%(default)s")')
 	ap.add_argument('--tokenfile', default=datafile('gdocs.token'), 
 		help='File which stores the access_token (default: "%(default)s")')
 	ap.add_argument('spreadsheet_key', help='Spreadsheet "key"')
