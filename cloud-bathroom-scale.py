@@ -19,8 +19,6 @@ from fcntl import ioctl
 import struct, array
 
 import gspread
-from gspread.urls import SPREADSHEETS_FEED_URL
-from gspread.httpsession import HTTPError
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.file import Storage
 
@@ -199,7 +197,7 @@ def get_authorization(cache_file):
 	if credentials is None:
 
 		flow = flow_from_clientsecrets(datafile('client_secrets.json'),
-								   scope=SPREADSHEETS_FEED_URL,
+								   scope='https://spreadsheets.google.com/feeds/',
 								   redirect_uri='oob')
 
 		auth_uri = flow.step1_get_authorize_url()
@@ -228,8 +226,8 @@ def record_weight(state, credentials, doc_key):
 
 		print('recorded', timestamp, state.stable_weight)
 		return True
-	except HTTPError as e:
-		print('error updating Google spreadsheet', e.response.status, e.response.reason)
+	except e:
+		print('error updating Google spreadsheet', e)
 		return False
 	finally:
 		pass
