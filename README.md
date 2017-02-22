@@ -48,21 +48,25 @@ Steps 6 & 7 verify that the setup is working as expected.
         deactivate
         rm -rf venv
 
-5. Create a project and a new Client ID at the [Google Developers Console](https://console.developers.google.com/).
+5. Expose the lirc device by adding a dtoverlay to `/boot/config.txt`:
+
+        dtoverlay=lirc-rpi,gpio_in_pin=4
+
+6. Create a project and a new Client ID at the [Google Developers Console](https://console.developers.google.com/).
    Select "Installed application" under "Application Type".
 
-6. Download the JSON file for the generated Client ID. Ensure that the filename is `client_secrets.json`.
+7. Download the JSON file for the generated Client ID. Ensure that the filename is `client_secrets.json`.
 
-7. Create a new Spreadsheet in Google Docs and delete off all the rows. Find
+8. Create a new Spreadsheet in Google Docs and delete off all the rows. Find
    the document "key" in the URL, which should look something like this:
 
         https://docs.google.com/spreadsheets/d/<DOCUMENT_KEY_HERE>/edit
 
-8. Run the script to test that it works by passing the `--test` argument:
+9. Run the script to test that it works by passing the `--test` argument:
 
         ./cloud-bathroom-scale.py --test <DOCUMENT_KEY>
 
-9. Check that a row has been added to the Spreadsheet with the current time.
+10. Check that a row has been added to the Spreadsheet with the current time.
 
 
 Normal Usage
