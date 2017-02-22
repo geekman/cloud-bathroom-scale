@@ -15,7 +15,7 @@ ExecStartPre=/usr/bin/modprobe lirc_rpi gpio_in_pin=${IR_GPIO}
 ExecStartPre=-/bin/sh -c "echo $LED_GPIO > /sys/class/gpio/export"
 ExecStartPre=/bin/sh -c "echo out > /sys/class/gpio/gpio${LED_GPIO}/direction"
 ExecStartPre=/usr/bin/chown $USER /sys/class/gpio/gpio${LED_GPIO}/value /dev/lirc0
-ExecStart=/bin/sh -c "cd $HOME/cloud-bathroom-scale/ && source bin/activate && ./cloud-bathroom-scale.py --led=$LED_GPIO $DOC_ID"
+ExecStart=/bin/sh -c "/home/$USER/cloud-bathroom-scale/cloud-bathroom-scale.py --led=$LED_GPIO $DOC_ID"
 Restart=on-abnormal
 
 [Install]

@@ -8,8 +8,11 @@
 # 2014.09.21 darell tan
 #
 
+from __future__ import print_function
+
 import os
 import sys
+import traceback
 import argparse
 from datetime import datetime
 from time import time, sleep
@@ -17,6 +20,10 @@ from threading import Thread, Lock
 
 from fcntl import ioctl
 import struct, array
+
+# try loading modules from deps dir
+__dir__ = os.path.dirname(__file__)
+sys.path.insert(0, os.path.join(__dir__, 'deps'))
 
 import gspread
 from oauth2client.client import flow_from_clientsecrets
@@ -236,8 +243,10 @@ def record_weight(state, credentials, doc_key):
 
 		print('recorded', timestamp, state.stable_weight)
 		return True
-	except e:
+	except:
+		e = sys.exc_info()[1]
 		print('error updating Google spreadsheet', e)
+		traceback.print_exc()
 		return False
 	finally:
 		pass

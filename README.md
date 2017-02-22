@@ -30,39 +30,44 @@ Steps 6 & 7 verify that the setup is working as expected.
 
         hg clone https://bitbucket.org/geekman/cloud-bathroom-scale
 
-2. Create the `virtualenv` and install Python dependencies. If your system has
+2. Create the `virtualenv` to download required the Python dependencies. If your system has
    both Python 2 and 3 installed, you might need to use `virtualenv2` instead.
 
         cd cloud-bathroom-scale
-        virtualenv .
-        source bin/activate
-        pip install -r requirements.txt
+        virtualenv venv
+        source venv/bin/activate
 
-3. Create a project and a new Client ID at the [Google Developers Console](https://console.developers.google.com/).
+3. Run the `mkwheels` script to download dependencies and 
+   unpack them into the `deps` directory:
+
+        ./mkwheels
+        unzip -d deps deps.zip
+
+4. Now the virtualenv is no longer needed. You can now deactivate and discard it:
+
+        deactivate
+        rm -rf venv
+
+5. Create a project and a new Client ID at the [Google Developers Console](https://console.developers.google.com/).
    Select "Installed application" under "Application Type".
 
-4. Download the JSON file for the generated Client ID. Ensure that the filename is `client_secrets.json`.
+6. Download the JSON file for the generated Client ID. Ensure that the filename is `client_secrets.json`.
 
-5. Create a new Spreadsheet in Google Docs and delete off all the rows. Find
+7. Create a new Spreadsheet in Google Docs and delete off all the rows. Find
    the document "key" in the URL, which should look something like this:
 
         https://docs.google.com/spreadsheets/d/<DOCUMENT_KEY_HERE>/edit
 
-6. Run the script to test that it works by passing the `--test` argument:
+8. Run the script to test that it works by passing the `--test` argument:
 
         ./cloud-bathroom-scale.py --test <DOCUMENT_KEY>
 
-7. Check that a row has been added to the Spreadsheet with the current time.
+9. Check that a row has been added to the Spreadsheet with the current time.
 
 
 Normal Usage
 -------------
-If you have used a `virtualenv`, you need to activate it first:
-
-    cd cloud-bathroom-scale
-    source bin/activate
-
-Then the script needs to be started:
+The script needs to be started, like so:
 
     ./cloud-bathroom-scale.py <DOCUMENT_KEY>
 
@@ -83,8 +88,7 @@ A systemd service file has been included (tested on Arch Linux) to
 automatically start the logging script on boot. You will need to copy this file
 into `/etc/systemd/system/multi-user.target.wants/` and modify the
 `Environment=` lines accordingly. For "security", the script runs as my user
-and this can be specified by the `User=` line. It assumes the virtualenv is
-setup in the `$HOME/cloud-bathroom-scale` directory.
+and this can be specified by the `User=` line.
 
 
 License
